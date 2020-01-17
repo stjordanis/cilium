@@ -16,6 +16,7 @@ require (
 	github.com/census-instrumentation/opencensus-proto v0.2.1 // indirect
 	github.com/cilium/arping v1.0.1-0.20190728065459-c5eaf8d7a710
 	github.com/cilium/ebpf v0.0.0-20191113100448-d9fb101ca1fb
+	github.com/cilium/hubble v0.0.0-20200122212746-174a5a38b421
 	github.com/cilium/proxy v0.0.0-20191113190709-4c7b379792e6
 	github.com/containernetworking/cni v0.7.1
 	github.com/containernetworking/plugins v0.8.2
@@ -72,6 +73,7 @@ require (
 	github.com/spf13/viper v1.6.1
 	github.com/vishvananda/netlink v1.0.1-0.20191113183427-d71301a47b60
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20190911215424-9ed5f76dc03b
+	go.uber.org/zap v1.10.0
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
@@ -166,6 +168,7 @@ replace (
 	github.com/cheekybits/genny => github.com/cheekybits/genny v0.0.0-20170328200008-9127e812e1e9
 	github.com/cilium/arping => github.com/cilium/arping v1.0.1-0.20190728065459-c5eaf8d7a710
 	github.com/cilium/ebpf => github.com/cilium/ebpf v0.0.0-20191113100448-d9fb101ca1fb
+	github.com/cilium/hubble => github.com/cilium/hubble v0.0.0-20200122212746-174a5a38b421
 	github.com/cilium/proxy => github.com/cilium/proxy v0.0.0-20191113190709-4c7b379792e6
 	github.com/circonus-labs/circonus-gometrics => github.com/circonus-labs/circonus-gometrics v2.3.1+incompatible
 	github.com/circonus-labs/circonusllhist => github.com/circonus-labs/circonusllhist v0.1.3
@@ -235,6 +238,7 @@ replace (
 	github.com/fatih/color => github.com/fatih/color v1.7.0
 	github.com/fatih/structs => github.com/fatih/structs v0.0.0-20180123065059-ebf56d35bba7
 	github.com/flynn/go-shlex => github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568
+	github.com/francoispqt/gojay => github.com/francoispqt/gojay v1.2.13
 	github.com/fsnotify/fsnotify => github.com/fsnotify/fsnotify v1.4.7
 	github.com/ghodss/yaml => github.com/ghodss/yaml v1.0.0
 	github.com/gliderlabs/ssh => github.com/gliderlabs/ssh v0.1.1
@@ -242,6 +246,7 @@ replace (
 	github.com/go-acme/lego => github.com/go-acme/lego v2.5.0+incompatible
 	github.com/go-bindata/go-bindata => github.com/go-bindata/go-bindata v3.1.1+incompatible
 	github.com/go-critic/go-critic => github.com/go-critic/go-critic v0.3.5-0.20190526074819-1df300866540
+	github.com/go-errors/errors => github.com/go-errors/errors v1.0.1
 	github.com/go-gl/glfw => github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1
 	github.com/go-kit/kit => github.com/go-kit/kit v0.8.0
 	github.com/go-ldap/ldap => github.com/go-ldap/ldap v3.0.2+incompatible
@@ -415,6 +420,7 @@ replace (
 	github.com/lucas-clemente/quic-clients => github.com/lucas-clemente/quic-clients v0.1.0
 	github.com/lucas-clemente/quic-go => github.com/lucas-clemente/quic-go v0.10.2
 	github.com/lucas-clemente/quic-go-certificates => github.com/lucas-clemente/quic-go-certificates v0.0.0-20160823095156-d2f86524cced
+	github.com/lunixbochs/vtclean => github.com/lunixbochs/vtclean v1.0.0
 	github.com/lyft/protoc-gen-star => github.com/lyft/protoc-gen-star v0.4.11
 	github.com/magiconair/properties => github.com/magiconair/properties v1.8.1
 	github.com/mailru/easyjson => github.com/mailru/easyjson v0.7.0
@@ -541,6 +547,8 @@ replace (
 	github.com/valyala/quicktemplate => github.com/valyala/quicktemplate v1.1.1
 	github.com/valyala/tcplisten => github.com/valyala/tcplisten v0.0.0-20161114210144-ceec8f93295a
 	github.com/vektah/gqlparser => github.com/vektah/gqlparser v1.1.2
+	github.com/viant/assertly => github.com/viant/assertly v0.4.8
+	github.com/viant/toolbox => github.com/viant/toolbox v0.24.0
 	github.com/vishvananda/netlink => github.com/vishvananda/netlink v1.0.1-0.20191113183427-d71301a47b60
 	github.com/vishvananda/netns => github.com/vishvananda/netns v0.0.0-20190625233234-7109fa855b0f
 	github.com/vmware/govmomi => github.com/vmware/govmomi v0.20.3

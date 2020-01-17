@@ -219,7 +219,7 @@ dev-docker-image: GIT_VERSION
 		--build-arg LOCKDEBUG=${LOCKDEBUG} \
 		--build-arg V=${V} \
 		--build-arg LIBNETWORK_PLUGIN=${LIBNETWORK_PLUGIN} \
-		-t "cilium/cilium-dev:$(DOCKER_IMAGE_TAG)" .
+		-t "localhost:5000/cilium-dev:$(DOCKER_IMAGE_TAG)" .
 	$(QUIET)echo "Push like this when ready:"
 	$(QUIET)echo "${CONTAINER_ENGINE} push cilium/cilium-dev:$(DOCKER_IMAGE_TAG)"
 

@@ -26,6 +26,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cilium/hubble/pkg/testutils"
+
+	"github.com/cilium/cilium/pkg/monitor/agent"
+
+	hubbleServe "github.com/cilium/hubble/cmd/serve"
+	v1 "github.com/cilium/hubble/pkg/api/v1"
+	ipcache2 "github.com/cilium/hubble/pkg/ipcache"
+	"github.com/cilium/hubble/pkg/parser"
+	hubbleEndpoint "github.com/cilium/hubble/pkg/parser/endpoint"
+	hubbleServer "github.com/cilium/hubble/pkg/server"
+	"github.com/go-openapi/loads"
+	gops "github.com/google/gops/agent"
+	"github.com/jessevdk/go-flags"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"github.com/vishvananda/netlink"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+
+	"github.com/cilium/cilium/api/v1/models"
 	"github.com/cilium/cilium/api/v1/server"
 	"github.com/cilium/cilium/api/v1/server/restapi"
 	"github.com/cilium/cilium/common"
@@ -39,9 +60,12 @@ import (
 	linuxdatapath "github.com/cilium/cilium/pkg/datapath/linux"
 	"github.com/cilium/cilium/pkg/datapath/maps"
 	"github.com/cilium/cilium/pkg/defaults"
+	"github.com/cilium/cilium/pkg/endpointmanager"
 	"github.com/cilium/cilium/pkg/envoy"
 	"github.com/cilium/cilium/pkg/flowdebug"
 	"github.com/cilium/cilium/pkg/identity"
+	"github.com/cilium/cilium/pkg/identity/cache"
+	"github.com/cilium/cilium/pkg/ipcache"
 	"github.com/cilium/cilium/pkg/k8s"
 	"github.com/cilium/cilium/pkg/k8s/watchers"
 	"github.com/cilium/cilium/pkg/kvstore"
@@ -58,15 +82,6 @@ import (
 	"github.com/cilium/cilium/pkg/policy"
 	"github.com/cilium/cilium/pkg/pprof"
 	"github.com/cilium/cilium/pkg/version"
-
-	"github.com/go-openapi/loads"
-	gops "github.com/google/gops/agent"
-	"github.com/jessevdk/go-flags"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/vishvananda/netlink"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -1334,6 +1349,7 @@ func runDaemon() {
 
 	bootstrapStats.overall.End(true)
 	bootstrapStats.updateMetrics()
+	d.runHubble()
 
 	select {
 	case err := <-metricsErrs:
@@ -1446,4 +1462,73 @@ func (d *Daemon) instantiateAPI() *restapi.CiliumAPI {
 	api.PolicyGetIPHandler = NewGetIPHandler()
 
 	return api
+}
+
+func (d *Daemon) runHubble() {
+	log.Info("Initializing hubble")
+	logger, _ := zap.NewDevelopment()
+	epDNSGetter := endpointDNSGetter{d.endpointManager}
+	payloadParser, _ := parser.New(&epDNSGetter,
+		&identityGetter{d.identityAllocator},
+		&epDNSGetter,
+		&ipGetter{ipcache.IPIdentityCache},
+		&testutils.NoopServiceGetter)
+	s := hubbleServer.NewLocalServer(
+		payloadParser,
+		131071,
+	)
+	hubbleServe.Serve(logger, []string{"0.0.0.0:50051"}, s)
+}
+
+type identityGetter struct {
+	allocator *cache.CachingIdentityAllocator
+}
+
+// GetIdentity implements IdentityGetter.GetIPIdentity.
+func (getter *identityGetter) GetIdentity(securityIdentity uint64) (*models.Identity, error) {
+	identity := getter.allocator.LookupIdentityByID(context.Background(), identity.NumericIdentity(securityIdentity))
+	if identity == nil {
+		return nil, fmt.Errorf("identity %d not found", securityIdentity)
+	}
+	return identity.GetModel(), nil
+}
+
+type endpointDNSGetter struct {
+	manager *endpointmanager.EndpointManager
+}
+
+func (getter *endpointDNSGetter) GetEndpoint(ip net.IP) (endpoint *v1.Endpoint, ok bool) {
+	ep := getter.manager.LookupIP(ip)
+	if ep == nil {
+		return nil, false
+	}
+	return hubbleEndpoint.ParseEndpointFromModel(ep.GetModel()), true
+}
+
+func (getter *endpointDNSGetter) GetNamesOf(sourceEpID uint64, ip net.IP) (fqdns []string) {
+	ep := getter.manager.LookupCiliumID(uint16(sourceEpID))
+	if ep == nil {
+		return nil
+	}
+	return ep.DNSHistory.LookupIP(ip)
+}
+
+type ipGetter struct {
+	ipIdentityCache *ipcache.IPCache
+}
+
+func (getter *ipGetter) GetIPIdentity(ip net.IP) (ipcache2.IPIdentity, bool) {
+	ipIdentity, ok := getter.ipIdentityCache.LookupByIP(ip.String())
+	if !ok {
+		return ipcache2.IPIdentity{}, false
+	}
+	meta := getter.ipIdentityCache.GetK8sMetadata(ip.String())
+	if meta == nil {
+		return ipcache2.IPIdentity{}, false
+	}
+	return ipcache2.IPIdentity{
+		Identity:  ipIdentity.ID,
+		Namespace: meta.Namespace,
+		PodName:   meta.PodName,
+	}, true
 }
