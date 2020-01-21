@@ -78,3 +78,8 @@ func (ml *listenerv1_2) drainQueue() {
 func (ml *listenerv1_2) Version() listener.Version {
 	return listener.Version1_2
 }
+
+func (ml *listenerv1_2) Close() {
+	ml.conn.Close()
+	ml.cleanupFn(ml)
+}

@@ -48,6 +48,8 @@ type MonitorListener interface {
 
 	// Version returns the API version of this listener
 	Version() Version
+
+	Close()
 }
 
 // IsDisconnected is a convenience function that wraps the absurdly long set of

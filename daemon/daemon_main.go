@@ -1477,6 +1477,7 @@ func (d *Daemon) runHubble() {
 		payloadParser,
 		131071,
 	)
+	d.monitorAgent.GetMonitor().RegisterNewListener(context.TODO(), agent.NewHubbleListener(s))
 	hubbleServe.Serve(logger, []string{"0.0.0.0:50051"}, s)
 }
 
