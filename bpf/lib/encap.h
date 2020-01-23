@@ -188,52 +188,17 @@ encap_and_redirect_with_nodeid(struct __sk_buff *skb, __u32 tunnel_endpoint,
  * and finally on successful redirect returns TC_ACT_REDIRECT.
  */
 static inline int __inline__
-encap_and_redirect_lxc(struct __sk_buff *skb, __u32 tunnel_endpoint, __u8 encrypt_key, struct endpoint_key *key, __u32 seclabel, __u32 monitor)
+encap_and_redirect_lxc(struct __sk_buff *skb, __u32 tunnel_endpoint, __u8 encrypt_key, __u32 seclabel, __u32 monitor)
 {
-	struct endpoint_key *tunnel;
-
-	if (tunnel_endpoint) {
-#ifdef ENABLE_IPSEC
-		if (encrypt_key)
-			return encap_and_redirect_ipsec(skb, tunnel_endpoint, encrypt_key, seclabel);
-#endif
-		return __encap_and_redirect_with_nodeid(skb, tunnel_endpoint, seclabel, monitor);
-	}
-
-	if ((tunnel = map_lookup_elem(&TUNNEL_MAP, key)) == NULL) {
+	if (!tunnel_endpoint)
 		return DROP_NO_TUNNEL_ENDPOINT;
-	}
 
 #ifdef ENABLE_IPSEC
-	if (tunnel->key) {
-		__u8 min_encrypt_key = get_min_encrypt_key(tunnel->key);
-
-		return encap_and_redirect_ipsec(skb, tunnel->ip4,
-						min_encrypt_key,
-						seclabel);
-	}
+	if (encrypt_key)
+		return encap_and_redirect_ipsec(skb, tunnel_endpoint, encrypt_key, seclabel);
 #endif
-	return __encap_and_redirect_with_nodeid(skb, tunnel->ip4, seclabel, monitor);
-}
 
-static inline int __inline__
-encap_and_redirect_netdev(struct __sk_buff *skb, struct endpoint_key *k, __u32 seclabel, __u32 monitor)
-{
-	struct endpoint_key *tunnel;
-
-	if ((tunnel = map_lookup_elem(&TUNNEL_MAP, k)) == NULL) {
-		return DROP_NO_TUNNEL_ENDPOINT;
-	}
-
-#ifdef ENABLE_IPSEC
-	if (tunnel->key) {
-		__u8 key = get_min_encrypt_key(tunnel->key);
-
-		return enacap_and_redirect_nomark_ipsec(skb, tunnel->ip4,
-						       key, seclabel);
-	}
-#endif
-	return __encap_and_redirect_with_nodeid(skb, tunnel->ip4, seclabel, monitor);
+	return __encap_and_redirect_with_nodeid(skb, tunnel_endpoint, seclabel, monitor);
 }
 #endif /* ENCAP_IFINDEX */
 #endif /* __LIB_ENCAP_H_ */
