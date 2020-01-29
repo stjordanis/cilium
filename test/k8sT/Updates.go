@@ -91,15 +91,12 @@ var _ = Describe("K8sUpdates", func() {
 		ExpectAllPodsTerminated(kubectl)
 	})
 
-	// FIXME don't skip once stable becomes v1.6 (v1.5 doesn't implement the kube-proxy
-	// replacement)
-	SkipItIf(func() bool { return !helpers.RunsWithKubeProxy() },
-		"Tests upgrade and downgrade from a Cilium stable image to master", func() {
-			var assertUpgradeSuccessful func()
-			assertUpgradeSuccessful, cleanupCallback =
-				InstallAndValidateCiliumUpgrades(kubectl, ciliumFilename, helpers.CiliumStableVersion, helpers.CiliumDevImage())
-			assertUpgradeSuccessful()
-		})
+	It("Tests upgrade and downgrade from a Cilium stable image to master", func() {
+		var assertUpgradeSuccessful func()
+		assertUpgradeSuccessful, cleanupCallback =
+			InstallAndValidateCiliumUpgrades(kubectl, ciliumFilename, helpers.CiliumStableVersion, helpers.CiliumDevImage())
+		assertUpgradeSuccessful()
+	})
 })
 
 // InstallAndValidateCiliumUpgrades installs and tests if the oldVersion can be

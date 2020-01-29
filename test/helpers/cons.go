@@ -174,7 +174,7 @@ const (
 	KubectlPolicyNameLabel      = k8sConst.PolicyLabelName
 	KubectlPolicyNameSpaceLabel = k8sConst.PolicyLabelNamespace
 
-	CiliumStableVersion      = "v1.5"
+	CiliumStableVersion      = "v1.6"
 	CiliumStableImageVersion = "cilium/cilium:" + CiliumStableVersion
 	ciliumDeveloperImage     = "%s/cilium/cilium-dev:latest"
 
