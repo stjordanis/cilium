@@ -244,6 +244,11 @@ const (
 	// ("snat" or "dsr")
 	NodePortMode = "node-port-mode"
 
+	// KubeProxyReplacement indicates whether to try to detect and then to enable
+	// kube-proxy replacement individual features ("probe"), or to strictly enable
+	// selected by user features ("strict"), or to enable selected features ("partial").
+	KubeProxyReplacement = "kube-proxy-replacement"
+
 	// NodePortRange defines a custom range where to look up NodePort services
 	NodePortRange = "node-port-range"
 
@@ -755,6 +760,18 @@ const (
 
 	// NodePortMaxDefault is the maximum port to listen for NodePort requests
 	NodePortMaxDefault = 32767
+
+	// KubeProxyReplacementProbe specifies to detect and enable available
+	// kube-proxy replacement features
+	KubeProxyReplacementProbe = "probe"
+
+	// KubeProxyReplacementStrictPartial specifies to strictly enable selected
+	// kube-proxy replacement features
+	KubeProxyReplacementStrictPartial = "strict"
+
+	// KubeProxyReplacementPartial specifies to enable only selected kube-proxy
+	// replacement features
+	KubeProxyReplacementPartial = "partial"
 )
 
 // GetTunnelModes returns the list of all tunnel modes
@@ -1247,6 +1264,11 @@ type DaemonConfig struct {
 	// ("snat" or "dsr")
 	NodePortMode string
 
+	// KubeProxyReplacement indicates whether to try to detect and then to enable
+	// kube-proxy replacement individual features ("probe"), or to strictly enable
+	// selected by user features ("strict"), or to enable selected features ("partial").
+	KubeProxyReplacement string
+
 	// EnableExternalIPs enables implementation of k8s services with externalIPs in datapath
 	EnableExternalIPs bool
 
@@ -1674,6 +1696,7 @@ func (c *DaemonConfig) Populate() {
 	c.EnableTracing = viper.GetBool(EnableTracing)
 	c.EnableNodePort = viper.GetBool(EnableNodePort)
 	c.NodePortMode = viper.GetString(NodePortMode)
+	c.KubeProxyReplacement = viper.GetString(KubeProxyReplacement)
 	c.EncryptInterface = viper.GetString(EncryptInterface)
 	c.EncryptNode = viper.GetBool(EncryptNode)
 	c.EnvoyLogPath = viper.GetString(EnvoyLog)
