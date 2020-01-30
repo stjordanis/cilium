@@ -535,10 +535,14 @@ var _ = Describe("K8sServicesTest", func() {
 
 					It("Connectivity to endpoint via LB", func() {
 						lbIP, err := kubectl.GetLoadBalancerIP(
-							helpers.DefaultNamespace, "test-lb", 30*time.Second)
-						Expect(err).Should(BeNil(), "Cannot retrieve loadbalancer IP for test-lb")
-
+							helpers.DefaultNamespace, "test-lb-udp", 30*time.Second)
+						Expect(err).Should(BeNil(), "Cannot retrieve loadbalancer IP for test-lb-udp")
 						doRequestsFromThirdHost("http://"+lbIP, 10, false)
+
+						lbIP, err = kubectl.GetLoadBalancerIP(
+							helpers.DefaultNamespace, "test-lb-udp", 30*time.Second)
+						Expect(err).Should(BeNil(), "Cannot retrieve loadbalancer IP for test-lb-udp")
+						doRequestsFromThirdHost("tftp://"+lbIP+"/hello", 10, false)
 					})
 				})
 
