@@ -224,6 +224,9 @@ var _ = Describe("K8sDatapathConfig", func() {
 
 			deployCilium(map[string]string{
 				"global.encryption.enabled": "true",
+				// to prevent from auto-enabling NodePort which is currently
+				// not compatible with IPSec
+				"global.kubeProxyReplacement": "strict",
 			})
 			validateBPFTunnelMap()
 			Expect(testPodConnectivityAcrossNodes(kubectl)).Should(BeTrue(), "Connectivity test with IPsec between nodes failed")
@@ -391,6 +394,7 @@ var _ = Describe("K8sDatapathConfig", func() {
 				"global.autoDirectNodeRoutes": "true",
 				"global.encryption.enabled":   "true",
 				"global.encryption.interface": "enp0s8",
+				"global.kubeProxyReplacement": "strict",
 			})
 			Expect(testPodConnectivityAcrossNodes(kubectl)).Should(BeTrue(), "Connectivity test between nodes failed")
 		})
