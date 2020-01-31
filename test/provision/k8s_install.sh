@@ -3,7 +3,7 @@
 set -e
 
 HOST=$(hostname)
-export HELM_VERSION="2.14.2"
+export HELM_VERSION="3.0.2"
 export TOKEN="258062.5d84c017c9b2796c"
 export CILIUM_CONFIG_DIR="/opt/cilium"
 export PROVISIONSRC="/tmp/provision/"

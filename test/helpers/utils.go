@@ -424,6 +424,19 @@ func CanRunK8sVersion(ciliumVersion, k8sVersionStr string) (bool, error) {
 	return constraint(k8sVersion), nil
 }
 
+func IsHelmBasedInstallation(ciliumVersion string) (bool, error) {
+	cst, err := versioncheck.Version(ciliumVersion)
+	if err != nil {
+		return false, err
+	}
+	switch {
+	case IsCiliumV1_5(cst):
+		return false, nil
+	default:
+		return true, nil
+	}
+}
+
 // failIfContainsBadLogMsg makes a test case to fail if any message from
 // given log messages contains an entry from badLogMessages (map key) AND
 // does not contain ignore messages (map value).

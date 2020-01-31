@@ -1,3 +1,17 @@
+// Copyright 2018-2020 Authors of Cilium
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package k8sTest
 
 import (
@@ -8,6 +22,7 @@ import (
 
 	. "github.com/cilium/cilium/test/ginkgo-ext"
 	"github.com/cilium/cilium/test/helpers"
+
 	. "github.com/onsi/gomega"
 )
 
@@ -147,6 +162,11 @@ func InstallAndValidateCiliumUpgrades(kubectl *helpers.Kubectl, ciliumFilename, 
 	}
 
 	testfunc := func() {
+		isOldVersionHelmBased, err := helpers.IsHelmBasedInstallation(oldVersion)
+		Expect(err).To(BeNil(), "Unable to check if Cilium %s is helm based installation", oldVersion)
+		// isNewVersionHelmBased, err := helpers.IsHelmBasedInstallation(oldVersion)
+		// Expect(err).To(BeNil(), "Unable to check if Cilium %s is helm based installation", newVersion)
+
 		By("Deleting Cilium, CoreDNS, and etcd-operator...")
 		// Making sure that we deleted the  cilium ds. No assert
 		// message because maybe is not present
@@ -169,25 +189,53 @@ func InstallAndValidateCiliumUpgrades(kubectl *helpers.Kubectl, ciliumFilename, 
 		ExpectAllPodsTerminated(kubectl)
 
 		By("Cleaning Cilium state")
-		err = kubectl.CiliumInstallVersion(
-			ciliumFilename,
-			"cilium-ds-clean-only.yaml",
-			"cilium-cm-patch-clean-cilium-state.yaml",
-			oldVersion,
-		)
-		Expect(err).To(BeNil(), "Cilium %q was not able to be deployed", oldVersion)
+		if isOldVersionHelmBased {
+			cmd := kubectl.HelmInstall()
+			ExpectWithOffset(1, cmd).To(helpers.CMDSuccess(), "Unable to install helm repository")
+			cmd = kubectl.CiliumInstallHelm(
+				oldVersion,
+				helpers.CiliumNamespace,
+				map[string]string{
+					"global.cleanState": "true",
+				},
+			)
+			ExpectWithOffset(1, cmd).To(helpers.CMDSuccess(), "Cilium %q was not able to be deployed", oldVersion)
+		} else {
+			err = kubectl.CiliumInstallVersion(
+				ciliumFilename,
+				"cilium-ds-clean-only.yaml",
+				"cilium-cm-patch-clean-cilium-state.yaml",
+				oldVersion,
+			)
+			Expect(err).To(BeNil(), "Cilium %q was not able to be deployed", oldVersion)
+		}
 
-		err := kubectl.WaitforPods(helpers.CiliumNamespace, "-l k8s-app=cilium", longTimeout)
+		err = kubectl.WaitforPods(helpers.CiliumNamespace, "-l k8s-app=cilium", longTimeout)
 		ExpectWithOffset(1, err).Should(BeNil(), "Cleaning state did not complete in time")
 
+		opts := map[string]string{
+			"preflight.enabled": "true ",
+			"agent.enabled":     "false ",
+			"config.enabled":    "false ",
+			"operator.enabled":  "false ",
+		}
 		By("Deploying Cilium")
-		err = kubectl.CiliumInstallVersion(
-			ciliumFilename,
-			helpers.CiliumDefaultDSPatch,
-			"cilium-cm-patch.yaml",
-			oldVersion,
-		)
-		Expect(err).To(BeNil(), "Cilium %q was not able to be deployed", oldVersion)
+		if isOldVersionHelmBased {
+			cmd := kubectl.CiliumInstallHelm(
+				oldVersion,
+				helpers.CiliumNamespace,
+				opts,
+			)
+			ExpectWithOffset(1, cmd).To(helpers.CMDSuccess(), "Cilium %q was not able to be deployed", oldVersion)
+		} else {
+			err = kubectl.CiliumInstallVersion(
+				ciliumFilename,
+				helpers.CiliumDefaultDSPatch,
+				"cilium-cm-patch.yaml",
+				oldVersion,
+			)
+			Expect(err).To(BeNil(), "Cilium %q was not able to be deployed", oldVersion)
+		}
 
 		By("Installing kube-dns")
 		_ = kubectl.ApplyDefault(helpers.DNSDeployment(kubectl.BasePath()))
@@ -324,12 +372,6 @@ func InstallAndValidateCiliumUpgrades(kubectl *helpers.Kubectl, ciliumFilename, 
 
 		By("Install Cilium pre-flight check DaemonSet")
 		helmTemplate := filepath.Join(kubectl.BasePath(), helpers.HelmTemplate)
-		opts := map[string]string{
-			"preflight.enabled": "true ",
-			"agent.enabled":     "false ",
-			"config.enabled":    "false ",
-			"operator.enabled":  "false ",
-		}
 
 		preflightFile := helpers.TimestampFilename("cilium-preflight.yaml")
 		res = kubectl.HelmTemplate(helmTemplate, helpers.CiliumNamespace, preflightFile, opts)

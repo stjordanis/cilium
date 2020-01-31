@@ -1,4 +1,4 @@
-// Copyright 2018-2019 Authors of Cilium
+// Copyright 2018-2020 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1421,6 +1421,20 @@ func (kub *Kubectl) ciliumUninstallHelm(filename string, options map[string]stri
 // CiliumInstall installs Cilium with the provided Helm options.
 func (kub *Kubectl) CiliumInstall(filename string, options map[string]string) error {
 	return kub.ciliumInstallHelm(filename, options)
+}
+
+// CiliumInstallHelm...
+func (kub *Kubectl) CiliumInstallHelm(version, namespace string, options map[string]string) *CmdRes {
+	optionsString := ""
+
+	for k, v := range options {
+		optionsString += fmt.Sprintf(" --set %s=%s ", k, v)
+	}
+
+	return kub.ExecMiddle(fmt.Sprintf("$HOME/local/bin/helm install cilium cilium/cilium "+
+		"--version %s "+
+		"--namespace=%s "+
+		"%s", version, namespace, optionsString))
 }
 
 // CiliumUninstall uninstalls Cilium with the provided Helm options.
@@ -2882,6 +2896,20 @@ func (kub *Kubectl) reportMapHost(ctx context.Context, path string, reportCmds m
 			log.WithError(err).Errorf("cannot create test results for command '%s'", cmd)
 		}
 	}
+}
+
+func (kub *Kubectl) HelmInstall() *CmdRes {
+	cmd := kub.ExecMiddle("/usr/local/bin/helm version")
+	kub.Logger().Errorf("HELM VERSION: %s", cmd.GetStdOut())
+	cmd = kub.ExecMiddle("mkdir -p $HOME/local/bin " +
+		"&& wget -nv https://get.helm.sh/helm-v3.0.2-linux-amd64.tar.gz " +
+		"&& tar xzvf helm-v3.0.2-linux-amd64.tar.gz " +
+		"&& mv linux-amd64/helm $HOME/local/bin")
+	// cmd = kub.ExecMiddle("$HOME/local/bin/helm init --client-only")
+	if !cmd.WasSuccessful() {
+		return cmd
+	}
+	return kub.ExecMiddle("$HOME/local/bin/helm repo add cilium https://helm.cilium.io")
 }
 
 // HelmTemplate renders given helm template. TODO: use go helm library for that
