@@ -67,8 +67,14 @@ func (p *testPolicyContextType) GetSelectorCache() *SelectorCache {
 	return testSelectorCache
 }
 
-func (p *testPolicyContextType) GetTLSContext(*api.TLSContext) (ca, public, private string, err error) {
-	return "", "", "", fmt.Errorf("Not supported")
+func (p *testPolicyContextType) GetTLSContext(tls *api.TLSContext) (ca, public, private string, err error) {
+	switch tls.Secret.Name {
+	case "tls-cert":
+		return "", "fake public cert", "fake private key", nil
+	case "tls-ca-certs":
+		return "fake CA certs", "", "", nil
+	}
+	return "", "", "", fmt.Errorf("Unknown test secret '%s'", tls.Secret.Name)
 }
 
 func (p *testPolicyContextType) GetEnvoyHTTPRules(*api.L7Rules) (*cilium.HttpNetworkPolicyRules, bool) {
@@ -661,6 +667,94 @@ func (ds *PolicyTestSuite) TestMergeIdenticalAllowAllL3AndMismatchingParsers(c *
 	c.Log(buffer)
 	c.Assert(err, Not(IsNil))
 	c.Assert(res, IsNil)
+}
+
+// TLS policies with and without interception
+func (ds *PolicyTestSuite) TestMergeTLSPolicies(c *C) {
+	egressRule := &rule{
+		Rule: api.Rule{
+			EndpointSelector: fooSelector,
+			Egress: []api.EgressRule{
+				{
+					ToEndpoints: []api.EndpointSelector{endpointSelectorA},
+					ToPorts: []api.PortRule{{
+						Ports: []api.PortProtocol{
+							{Port: "443", Protocol: api.ProtoTCP},
+						},
+					}},
+				},
+				{
+					ToEndpoints: []api.EndpointSelector{endpointSelectorC},
+					ToPorts: []api.PortRule{{
+						Ports: []api.PortProtocol{
+							{Port: "443", Protocol: api.ProtoTCP},
+						},
+						TerminatingTLS: &api.TLSContext{
+							Secret: &api.Secret{
+								Name: "tls-cert",
+							},
+						},
+						OriginatingTLS: &api.TLSContext{
+							Secret: &api.Secret{
+								Name: "tls-ca-certs",
+							},
+						},
+						Rules: &api.L7Rules{
+							HTTP: []api.PortRuleHTTP{{}},
+						},
+					}},
+				},
+			},
+		}}
+
+	buffer := new(bytes.Buffer)
+	ctxFromFoo := SearchContext{From: labels.ParseSelectLabelArray("foo"), Trace: TRACE_VERBOSE}
+	ctxFromFoo.Logging = logging.NewLogBackend(buffer, "", 0)
+	c.Log(buffer)
+
+	err := egressRule.Sanitize()
+	c.Assert(err, IsNil)
+
+	state := traceState{}
+	res, err := egressRule.resolveEgressPolicy(testPolicyContext, &ctxFromFoo, &state, L4PolicyMap{}, nil)
+	c.Log(buffer)
+	c.Assert(err, IsNil)
+	c.Assert(res, Not(IsNil))
+
+	expected := L4PolicyMap{"443/TCP": &L4Filter{
+		Port:            443,
+		Protocol:        api.ProtoTCP,
+		U8Proto:         6,
+		allowsAllAtL3:   false,
+		CachedSelectors: CachedSelectorSlice{cachedSelectorA, cachedSelectorC},
+		L7Parser:        ParserTypeHTTP,
+		L7RulesPerEp: L7DataMap{
+			cachedSelectorC: &PerEpData{
+				TerminatingTLS: &TLSContext{
+					CertificateChain: "fake public cert",
+					PrivateKey:       "fake private key",
+				},
+				OriginatingTLS: &TLSContext{
+					TrustedCA: "fake CA certs",
+				},
+				EnvoyHTTPRules: nil,
+				CanShortCircuit: false,
+				L7Rules: api.L7Rules{
+					HTTP: []api.PortRuleHTTP{{}},
+				},
+			},
+		},
+		Ingress:          false,
+		DerivedFromRules: labels.LabelArrayList{nil, nil},
+	}}
+
+	c.Assert(res, checker.Equals, expected)
+
+	l4Filter := res["443/TCP"]
+	c.Assert(l4Filter, Not(IsNil))
+	c.Assert(l4Filter.allowsAllAtL3, Equals, false)
+	c.Assert(l4Filter.L7Parser, Equals, ParserTypeHTTP)
+	log.Infof("res: %v", res)
 }
 
 // Case 6: allow all at L3/L7 in one rule, and select an endpoint and allow all on L7
