@@ -225,6 +225,11 @@ func (l4 *L4Filter) AllowsAllAtL3() bool {
 	return l4.allowsAllAtL3
 }
 
+// HasL7Rules returns true if this L4Filter has any L7 rules
+func (l4 *L4Filter) HasL7Rules() bool {
+	return len(l4.L7RulesPerEp) > 0
+}
+
 // HasL3DependentL7Rules returns true if this L4Filter is created from rules
 // that require an L3 match as well as specific L7 rules.
 func (l4 *L4Filter) HasL3DependentL7Rules() bool {
@@ -242,75 +247,76 @@ func (l4 *L4Filter) HasL3DependentL7Rules() bool {
 	return true
 }
 
-// ToKeys converts filter into a list of Keys. Also returns a
-// corresponding slice of booleans telling if the key should be
-// redirected to a proxy or not.
-func (l4 *L4Filter) ToKeys(direction trafficdirection.TrafficDirection) ([]Key, []bool) {
-	keysToAdd := []Key{}
-	redirects := []bool{}
+// ToMapState converts filter into a map of MapState entries.
+func (l4 *L4Filter) ToMapState(direction trafficdirection.TrafficDirection) MapState {
+	keysToAdd := MapState{}
 	port := uint16(l4.Port)
 	proto := uint8(l4.U8Proto)
 
 	if l4.AllowsAllAtL3() {
+		keyToAdd := Key{
+			DestPort:         0,
+			Nexthdr:          0,
+			TrafficDirection: direction.Uint8(),
+		}
 		if l4.Port == 0 {
 			// Allow-all
 			log.WithFields(logrus.Fields{
 				logfields.TrafficDirection: direction,
 			}).Debug("ToKeys: allow all")
-
-			keyToAdd := Key{
-				DestPort:         0,
-				Nexthdr:          0,
-				TrafficDirection: direction.Uint8(),
-			}
-			keysToAdd = append(keysToAdd, keyToAdd)
-			redirects = append(redirects, false)
-		} else {
-			// L4 allow
-			log.WithFields(logrus.Fields{
-				logfields.Port:             port,
-				logfields.Protocol:         proto,
-				logfields.TrafficDirection: direction,
-			}).Debug("ToKeys: L4 allow all")
-
-			keyToAdd := Key{
-				Identity: 0,
-				// NOTE: Port is in host byte-order!
-				DestPort:         port,
-				Nexthdr:          proto,
-				TrafficDirection: direction.Uint8(),
-			}
-			keysToAdd = append(keysToAdd, keyToAdd)
-			redirects = append(redirects, false)
+			keysToAdd[keyToAdd] = NoRedirectEntry
+			return keysToAdd // no port, no L7, so can return here
 		}
-		if !l4.HasL3DependentL7Rules() {
-			return keysToAdd, redirects
-		} // else we need to calculate all L3-dependent L4 peers below.
+		// L4 allow
+		log.WithFields(logrus.Fields{
+			logfields.Port:             port,
+			logfields.Protocol:         proto,
+			logfields.TrafficDirection: direction,
+		}).Debug("ToKeys: L4 allow all")
+
+		keyToAdd.DestPort = port // NOTE: Port is in host byte-order!
+		keyToAdd.Nexthdr = proto
+
+		// If the L4 allow all entry redirects, then L7RulesPerEp has a wildcard selector
+		entry := NoRedirectEntry
+		for cs := range l4.L7RulesPerEp {
+			if cs.IsWildcard() {
+				entry = RedirectEntry
+				break
+			}
+		}
+		keysToAdd[keyToAdd] = entry
 	}
 
 	for _, cs := range l4.CachedSelectors {
-		redirect := l4.L7RulesPerEp[cs] != nil
+		if cs.IsWildcard() {
+			continue // Wildcard selector already processed above
+		}
 		identities := cs.GetSelections()
 		log.WithFields(logrus.Fields{
 			logfields.TrafficDirection: direction,
 			logfields.EndpointSelector: cs,
 			logfields.PolicyID:         identities,
 		}).Debug("ToKeys: Allowed remote IDs")
+
+		keyToAdd := Key{
+			Identity:         0,    // Set in the loop below
+			DestPort:         port, // NOTE: Port is in host byte-order!
+			Nexthdr:          proto,
+			TrafficDirection: direction.Uint8(),
+		}
+		entry := NoRedirectEntry
+		if l4.L7RulesPerEp[cs] != nil {
+			entry = RedirectEntry
+		}
+
 		for _, id := range identities {
-			srcID := id.Uint32()
-			keyToAdd := Key{
-				Identity: srcID,
-				// NOTE: Port is in host byte-order!
-				DestPort:         port,
-				Nexthdr:          proto,
-				TrafficDirection: direction.Uint8(),
-			}
-			keysToAdd = append(keysToAdd, keyToAdd)
-			redirects = append(redirects, redirect)
+			keyToAdd.Identity = id.Uint32()
+			keysToAdd[keyToAdd] = entry
 		}
 	}
 
-	return keysToAdd, redirects
+	return keysToAdd
 }
 
 // IdentitySelectionUpdated implements CachedSelectionUser interface
@@ -326,8 +332,9 @@ func (l4 *L4Filter) IdentitySelectionUpdated(selector CachedSelector, selections
 		logfields.DeletedPolicyID:  deleted,
 	}).Debug("identities selected by L4Filter updated")
 
-	// Skip updates on filter that wildcards L3.
-	// This logic mirrors the one in ToKeys().
+	// Skip updates on filter that wildcards L3 and has no L3 dependent L7 rules.
+	// In this case the L3 identities are being wildcarded, so we do not need to
+	// enumerate them.
 	if l4.AllowsAllAtL3() && !l4.HasL3DependentL7Rules() {
 		return
 	}

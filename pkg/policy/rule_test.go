@@ -1967,7 +1967,22 @@ func (ds *PolicyTestSuite) TestL3L4L7Merge(c *C) {
 	c.Assert(filter.CachedSelectors[1], checker.Equals, cachedSelectorC)
 
 	c.Assert(filter.L7Parser, Equals, ParserTypeHTTP)
-	c.Assert(len(filter.L7RulesPerEp), Equals, 2)
+	c.Assert(len(filter.L7RulesPerEp), Equals, 1)
+	c.Assert(filter, checker.Equals, &L4Filter{
+		Port: 80, Protocol: api.ProtoTCP, U8Proto: 6,
+		allowsAllAtL3:   true,
+		CachedSelectors: CachedSelectorSlice{wildcardCachedSelector, cachedSelectorC},
+		L7Parser:        "http",
+		L7RulesPerEp: L7DataMap{
+			wildcardCachedSelector: &PerEpData{
+				L7Rules: api.L7Rules{
+					HTTP: []api.PortRuleHTTP{{Path: "/", Method: "GET"}},
+				},
+			},
+		},
+		Ingress: true,
+		DerivedFromRules: labels.LabelArrayList{nil, nil},
+	})
 	l4IngressPolicy.Detach(repo.GetSelectorCache())
 
 	repo = parseAndAddRules(c, api.Rules{&api.Rule{
@@ -2011,11 +2026,27 @@ func (ds *PolicyTestSuite) TestL3L4L7Merge(c *C) {
 	c.Assert(filter.Ingress, Equals, true)
 
 	c.Assert(len(filter.CachedSelectors), Equals, 2)
-	c.Assert(filter.CachedSelectors[0], checker.Equals, wildcardCachedSelector)
-	c.Assert(filter.CachedSelectors[1], checker.Equals, cachedSelectorC)
+	c.Assert(filter.CachedSelectors[0], checker.Equals, cachedSelectorC)
+	c.Assert(filter.CachedSelectors[1], checker.Equals, wildcardCachedSelector)
 
 	c.Assert(filter.L7Parser, Equals, ParserTypeHTTP)
-	c.Assert(len(filter.L7RulesPerEp), Equals, 2)
+	c.Assert(len(filter.L7RulesPerEp), Equals, 1)
+	c.Assert(filter, checker.Equals, &L4Filter{
+		Port: 80, Protocol: api.ProtoTCP, U8Proto: 6,
+		allowsAllAtL3:   true,
+		CachedSelectors: CachedSelectorSlice{cachedSelectorC, wildcardCachedSelector},
+		L7Parser:        "http",
+		L7RulesPerEp: L7DataMap{
+			wildcardCachedSelector: &PerEpData{
+				L7Rules: api.L7Rules{
+					HTTP: []api.PortRuleHTTP{{Path: "/", Method: "GET"}},
+				},
+			},
+		},
+		Ingress: true,
+		DerivedFromRules: labels.LabelArrayList{nil, nil},
+	})
+	
 	l4IngressPolicy.Detach(repo.GetSelectorCache())
 }
 

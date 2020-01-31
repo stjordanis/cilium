@@ -144,7 +144,7 @@ func (rules ruleSlice) resolveL4IngressPolicy(policyCtx PolicyContext, ctx *Sear
 		}
 	}
 
-	matchedRules.wildcardL3L4Rules(ctx, true, result, requirements, policyCtx.GetSelectorCache())
+	// matchedRules.wildcardL3L4Rules(ctx, true, result, requirements, policyCtx.GetSelectorCache())
 
 	state.trace(len(rules), ctx)
 
@@ -195,7 +195,7 @@ func (rules ruleSlice) resolveL4EgressPolicy(policyCtx PolicyContext, ctx *Searc
 		}
 	}
 
-	matchedRules.wildcardL3L4Rules(ctx, false, result, requirements, policyCtx.GetSelectorCache())
+	// matchedRules.wildcardL3L4Rules(ctx, false, result, requirements, policyCtx.GetSelectorCache())
 
 	state.trace(len(rules), ctx)
 

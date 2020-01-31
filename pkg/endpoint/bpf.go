@@ -216,16 +216,15 @@ func (e *Endpoint) addNewRedirectsFromDesiredPolicy(ingress bool, desiredRedirec
 				direction = trafficdirection.Egress
 			}
 
-			keysFromFilter, redirects := l4.ToKeys(direction)
+			keysFromFilter := l4.ToMapState(direction)
 
-			for i, keyFromFilter := range keysFromFilter {
+			for keyFromFilter, entry := range keysFromFilter {
 				if oldEntry, ok := e.desiredPolicy.PolicyMapState[keyFromFilter]; ok {
 					updatedDesiredMapState[keyFromFilter] = oldEntry
 				} else {
 					insertedDesiredMapState[keyFromFilter] = struct{}{}
 				}
-				var entry policy.MapStateEntry
-				if redirects[i] {
+				if entry != policy.NoRedirectEntry {
 					entry.ProxyPort = redirectPort
 				}
 				e.desiredPolicy.PolicyMapState[keyFromFilter] = entry
