@@ -133,11 +133,16 @@ func mergePortProto(ctx *SearchContext, existingFilter, filterToMerge *L4Filter,
 					return fmt.Errorf("cannot merge conflicting L7 rule types")
 				}
 
+				ctx.PolicyTrace("   Merging HTTP rules, before: %+v\n", l7Rules.HTTP)
 				for _, newRule := range newL7Rules.HTTP {
 					if !newRule.Exists(l7Rules.L7Rules) {
+						ctx.PolicyTrace("   Merging HTTP rule: %+v\n", newRule)
 						l7Rules.HTTP = append(l7Rules.HTTP, newRule)
+					} else {
+						ctx.PolicyTrace("   Merging HTTP rules, equal rule already exists: %+v\n", newRule)
 					}
 				}
+				ctx.PolicyTrace("   Merging HTTP rules, after: %+v\n", l7Rules.HTTP)
 			case len(newL7Rules.Kafka) > 0:
 				if len(l7Rules.HTTP) > 0 || len(l7Rules.DNS) > 0 || l7Rules.L7Proto != "" {
 					ctx.PolicyTrace("   Merge conflict: mismatching L7 rule types.\n")
@@ -180,6 +185,7 @@ func mergePortProto(ctx *SearchContext, existingFilter, filterToMerge *L4Filter,
 			}
 			existingFilter.L7RulesPerEp[cs] = l7Rules
 		} else {
+			ctx.PolicyTrace("   Existing filter did not have L7 rules for the cs, adding: %+v for %+v\n", newL7Rules, cs)
 			existingFilter.L7RulesPerEp[cs] = newL7Rules
 		}
 	}
@@ -219,7 +225,7 @@ func mergeIngressPortProto(policyCtx PolicyContext, ctx *SearchContext, endpoint
 	}
 	existingFilter.DerivedFromRules = append(existingFilter.DerivedFromRules, ruleLabels)
 	resMap[key] = existingFilter
-
+	ctx.PolicyTrace("L4PolicyMap after merge: %+v\n", resMap)
 	return 1, nil
 }
 

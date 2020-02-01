@@ -1826,7 +1826,7 @@ func (ds *PolicyTestSuite) TestMinikubeGettingStarted(c *C) {
 		L7RulesPerEp: L7DataMap{
 			cachedSelectorApp2: &PerEpData{
 				L7Rules: api.L7Rules{
-					HTTP: []api.PortRuleHTTP{{}},
+					HTTP: []api.PortRuleHTTP{{},{Method: "GET", Path: "/"}},
 				},
 			},
 		},

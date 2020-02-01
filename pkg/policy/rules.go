@@ -27,7 +27,7 @@ import (
 // to be written with []*rule as a receiver.
 type ruleSlice []*rule
 
-func (rules ruleSlice) wildcardL3L4Rules(ingress bool, l4Policy L4PolicyMap, requirements []v1.LabelSelectorRequirement, selectorCache *SelectorCache) {
+func (rules ruleSlice) wildcardL3L4Rules(ctx *SearchContext, ingress bool, l4Policy L4PolicyMap, requirements []v1.LabelSelectorRequirement, selectorCache *SelectorCache) {
 	// Duplicate L3-only rules into wildcard L7 rules.
 	for _, r := range rules {
 		if ingress {
@@ -59,6 +59,8 @@ func (rules ruleSlice) wildcardL3L4Rules(ingress bool, l4Policy L4PolicyMap, req
 								// Already validated via PortRule.Validate().
 								port, _ := strconv.ParseUint(p.Port, 0, 16)
 								wildcardL3L4Rule(p.Protocol, int(port), fromEndpoints, ruleLabels, l4Policy, selectorCache)
+								ctx.PolicyTrace("  ADDED wildcard rule to an L3/L4 only rule: %+v\n", l4Policy)
+
 							}
 						}
 					}
@@ -142,7 +144,7 @@ func (rules ruleSlice) resolveL4IngressPolicy(policyCtx PolicyContext, ctx *Sear
 		}
 	}
 
-	matchedRules.wildcardL3L4Rules(true, result, requirements, policyCtx.GetSelectorCache())
+	matchedRules.wildcardL3L4Rules(ctx, true, result, requirements, policyCtx.GetSelectorCache())
 
 	state.trace(len(rules), ctx)
 
@@ -193,7 +195,7 @@ func (rules ruleSlice) resolveL4EgressPolicy(policyCtx PolicyContext, ctx *Searc
 		}
 	}
 
-	matchedRules.wildcardL3L4Rules(false, result, requirements, policyCtx.GetSelectorCache())
+	matchedRules.wildcardL3L4Rules(ctx, false, result, requirements, policyCtx.GetSelectorCache())
 
 	state.trace(len(rules), ctx)
 
