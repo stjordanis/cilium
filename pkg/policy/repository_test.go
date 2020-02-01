@@ -1412,11 +1412,15 @@ func (ds *PolicyTestSuite) TestWildcardCIDRRulesEgress(c *C) {
 			L7RulesPerEp: L7DataMap{
 				cachedSelectors[0]: &PerEpData{
 					L7Rules: api.L7Rules{
-						HTTP: []api.PortRuleHTTP{{}},
+						HTTP: []api.PortRuleHTTP{{
+							Headers: []string{"X-My-Header: true"},
+							Method:  "GET",
+							Path:    "/",
+						}, {}},
 					},
 				},
 			},
-			DerivedFromRules: labels.LabelArrayList{labelsHTTP, labelsL3},
+			DerivedFromRules: labels.LabelArrayList{labelsHTTP},
 		},
 		"0/ANY": {
 			Port:             0,
@@ -1826,12 +1830,12 @@ func (ds *PolicyTestSuite) TestMinikubeGettingStarted(c *C) {
 		L7RulesPerEp: L7DataMap{
 			cachedSelectorApp2: &PerEpData{
 				L7Rules: api.L7Rules{
-					HTTP: []api.PortRuleHTTP{{},{Method: "GET", Path: "/"}},
+					HTTP: []api.PortRuleHTTP{{Method: "GET", Path: "/"}, {}},
 				},
 			},
 		},
 		Ingress:          true,
-		DerivedFromRules: []labels.LabelArray{nil, nil, nil, nil},
+		DerivedFromRules: []labels.LabelArray{nil, nil, nil},
 	}
 
 	if equal, err := checker.Equal(l4IngressPolicy, expected.Ingress); !equal {

@@ -264,7 +264,7 @@ func (ds *PolicyTestSuite) TestMergeAllowAllL3AndShadowedL7(c *C) {
 		L7RulesPerEp: L7DataMap{
 			wildcardCachedSelector: &PerEpData{
 				L7Rules: api.L7Rules{
-					HTTP: []api.PortRuleHTTP{{Path: "/", Method: "GET"}},
+					HTTP: []api.PortRuleHTTP{{Path: "/", Method: "GET"}, {}},
 				},
 			},
 		},

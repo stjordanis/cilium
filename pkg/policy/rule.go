@@ -71,6 +71,41 @@ func (l4 *L4Filter) mergeCachedSelectors(from *L4Filter, selectorCache *Selector
 	from.CachedSelectors = nil
 }
 
+func (epd *PerEpData) appendL7WildcardRules(ctx *SearchContext) {
+	switch {
+	case len(epd.L7Rules.HTTP) > 0:
+		rule := api.PortRuleHTTP{}
+		if !rule.Exists(epd.L7Rules) {
+			ctx.PolicyTrace("   Merging HTTP wildcard rule: %+v\n", rule)
+			epd.L7Rules.HTTP = append(epd.L7Rules.HTTP, rule)
+		} else {
+			ctx.PolicyTrace("   Merging HTTP wildcard rule, equal rule already exists: %+v\n", rule)
+		}
+
+	case len(epd.L7Rules.Kafka) > 0:
+		rule := api.PortRuleKafka{}
+		rule.Sanitize()
+		if !rule.Exists(epd.L7Rules) {
+			ctx.PolicyTrace("   Merging Kafka wildcard rule: %+v\n", rule)
+			epd.L7Rules.Kafka = append(epd.L7Rules.Kafka, rule)
+		} else {
+			ctx.PolicyTrace("   Merging Kafka wildcard rule, equal rule already exists: %+v\n", rule)
+		}
+	case len(epd.L7Rules.DNS) > 0:
+		// Wildcarding at L7 for DNS is specified via allowing all via
+		// MatchPattern!
+		rule := api.PortRuleDNS{MatchPattern: "*"}
+		rule.Sanitize()
+		if !rule.Exists(epd.L7Rules) {
+			ctx.PolicyTrace("   Merging DNS wildcard rule: %+v\n", rule)
+			epd.L7Rules.DNS = append(epd.L7Rules.DNS, rule)
+		} else {
+			ctx.PolicyTrace("   Merging DNS wildcard rule, equal rule already exists: %+v\n", rule)
+		}
+	}
+	// Nothing needs to be done for L7
+}
+
 func mergePortProto(ctx *SearchContext, existingFilter, filterToMerge *L4Filter, selectorCache *SelectorCache) error {
 	// Handle cases where filter we are merging new rule with, new rule itself
 	// allows all traffic on L3, or both rules allow all traffic on L3.
@@ -95,6 +130,20 @@ func mergePortProto(ctx *SearchContext, existingFilter, filterToMerge *L4Filter,
 			existingFilter.allowsAllAtL3 = true
 		}
 	}
+	// Note which selectors from the existing filter did not have any L7 rules.
+	exNonL7selectors := make(map[CachedSelector]struct{})
+	for _, cs := range existingFilter.CachedSelectors {
+		if _, ok := existingFilter.L7RulesPerEp[cs]; !ok {
+			exNonL7selectors[cs] = struct{}{}
+		}
+	}
+	// Note which selectors from the new filter did not have any L7 rules.
+	newNonL7selectors := make(map[CachedSelector]struct{})
+	for _, cs := range filterToMerge.CachedSelectors {
+		if _, ok := filterToMerge.L7RulesPerEp[cs]; !ok {
+			newNonL7selectors[cs] = struct{}{}
+		}
+	}
 	existingFilter.mergeCachedSelectors(filterToMerge, selectorCache)
 
 	// Merge the L7-related data from the filter to merge
@@ -108,6 +157,8 @@ func mergePortProto(ctx *SearchContext, existingFilter, filterToMerge *L4Filter,
 		}
 	}
 
+	// XXX: Merging of rules on the same 'cs' should also add wildcards if one of the rules has L7 and other doesn't
+	
 	for cs, newL7Rules := range filterToMerge.L7RulesPerEp {
 		// skip merging for reserved:none, as it is never
 		// selected, and toFQDN rules currently translate to
@@ -186,10 +237,31 @@ func mergePortProto(ctx *SearchContext, existingFilter, filterToMerge *L4Filter,
 			}
 			existingFilter.L7RulesPerEp[cs] = l7Rules
 		} else {
-			ctx.PolicyTrace("   Existing filter did not have L7 rules for the cs, adding: %+v for %+v\n", newL7Rules, cs)
+			if _, ok := exNonL7selectors[cs]; ok {
+				ctx.PolicyTrace("   Existing filter had L3/L4 rule but no L7 rules for the cs, adding a wildcard rule for %+v\n", cs)
+				newL7Rules.appendL7WildcardRules(ctx)
+			} else {
+				ctx.PolicyTrace("   Existing filter was NOT in exNonL7selectors map! (cs: %+v)", cs)
+			}
 			existingFilter.L7RulesPerEp[cs] = newL7Rules
 		}
 	}
+	for cs := range newNonL7selectors {
+		// skip merging for reserved:none, as it is never
+		// selected, and toFQDN rules currently translate to
+		// reserved:none as an endpoint selector, causing a
+		// merge conflict for different toFQDN destinations
+		// with different TLS contexts.
+		if cs.IsNone() {
+			continue
+		}
+		if existingRules, ok := existingFilter.L7RulesPerEp[cs]; ok {
+			ctx.PolicyTrace("  New filter had L3/L4 rule without L7 rules for the cs, which is shadowed by an L7 rule in the existing filter; adding a wildcard rule for %+v\n", cs)
+			existingRules.appendL7WildcardRules(ctx)
+			existingFilter.L7RulesPerEp[cs] = existingRules
+		}
+	}
+
 	return nil
 }
 

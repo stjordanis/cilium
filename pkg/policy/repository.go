@@ -262,7 +262,6 @@ func (p *Repository) ResolveL4IngressPolicy(ctx *SearchContext) (L4PolicyMap, er
 		ns:   ctx.To.Get(labels.LabelSourceK8sKeyPrefix + k8sConst.PodNamespaceLabel),
 	}
 	result, err := p.rules.resolveL4IngressPolicy(&policyCtx, ctx)
-	ctx.PolicyTrace("L4PolicyMap after ResolveL4IngressPolicy: %+v\n", result)
 	if err != nil {
 		return nil, err
 	}
