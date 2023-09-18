@@ -91,7 +91,7 @@ jobs:
           persist-credentials: false
 
       - name: Create kind cluster
-        uses: helm/kind-action@d08cf6ff1575077dee99962540d77ce91c62387d
+        uses: helm/kind-action@dda0770415bac9fc20092cacbc54aa298604d140
         with:
           version: ${{ env.kind_version }}
           config: ${{ env.kind_config }}
