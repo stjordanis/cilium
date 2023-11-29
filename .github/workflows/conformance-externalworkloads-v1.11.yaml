@@ -222,7 +222,7 @@ jobs:
           gcloud info
 
       - name: Create GCP VM
-        uses: nick-invision/retry@b4fa57557dda8c2f30bcb2d19372cc3237190f7f
+        uses: nick-invision/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4
         with:
           retry_on: error
           timeout_minutes: 1
