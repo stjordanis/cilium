@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7
         with:
           go-version: 1.19.1
       - name: Cache LLVM and Clang
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7
         with:
           go-version: 1.19.1
       - name: Cache LLVM and Clang
