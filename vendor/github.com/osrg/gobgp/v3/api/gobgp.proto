@@ -125,13 +125,18 @@ message WatchEventRequest {
 
   message Table {
     message Filter {
-      enum Type { BEST = 0; ADJIN = 1; POST_POLICY = 2; }
+      enum Type { BEST = 0; ADJIN = 1; POST_POLICY = 2; EOR = 3; }
       Type type = 1;
       bool init = 2;
+      string peer_address = 3;
+      string peer_group = 4;
     }
     repeated Filter filters = 1;
   }
   Table table = 2;
+
+  // Max number of paths to include in a single message. 0 for unlimited.
+  uint32 batch_size = 3;
 }
 
 message WatchEventResponse {
@@ -247,6 +252,7 @@ message TableLookupPrefix {
   enum Type { EXACT = 0; LONGER = 1; SHORTER = 2; }
   string prefix = 1;
   Type type = 2;
+  string rd = 3;
 }
 
 message ListPathRequest {
@@ -259,6 +265,11 @@ message ListPathRequest {
   bool enable_filtered = 6;
   bool enable_nlri_binary = 7;
   bool enable_attribute_binary = 8;
+  // enable_only_binary == true means that only nlri_binary and pattrs_binary
+  // will be used instead of nlri and pattrs for each Path in ListPathResponse.
+  bool enable_only_binary = 9;
+  // max ammount of paths to be allocated, unlimited by default
+  uint64 batch_size = 10;
 }
 
 message ListPathResponse { Destination destination = 1; }
@@ -314,7 +325,10 @@ message SetPoliciesRequest {
   repeated PolicyAssignment assignments = 3;
 }
 
-message AddDefinedSetRequest { DefinedSet defined_set = 1; }
+message AddDefinedSetRequest {
+  DefinedSet defined_set = 1;
+  bool replace = 2;
+}
 
 message DeleteDefinedSetRequest {
   DefinedSet defined_set = 1;
@@ -459,6 +473,7 @@ message Family {
     SAFI_EVPN = 70;
     SAFI_LS = 71;
     SAFI_SR_POLICY = 73;
+    SAFI_MUP = 85;
     SAFI_MPLS_VPN = 128;
     SAFI_MPLS_VPN_MULTICAST = 129;
     SAFI_ROUTE_TARGET_CONSTRAINTS = 132;
@@ -492,6 +507,7 @@ message Path {
   // - IPAddressPrefix
   // - LabeledIPAddressPrefix
   // - EncapsulationNLRI
+  // - VPLSNLRI
   // - EVPNEthernetAutoDiscoveryRoute
   // - EVPNMACIPAdvertisementRoute
   // - EVPNInclusiveMulticastEthernetTagRoute
@@ -505,6 +521,10 @@ message Path {
   // - OpaqueNLRI
   // - LsAddrPrefix
   // - SRPolicyNLRI
+  // - MUPInterworkSegmentDiscoveryRoute
+  // - MUPDirectSegmentDiscoveryRoute
+  // - MUPType1SessionTransformedRoute
+  // - MUPType2SessionTransformedRoute
   google.protobuf.Any nlri = 1;
   // Each attribute must be one of *Attribute defined in
   // "api/attribute.proto".
@@ -527,6 +547,7 @@ message Path {
   uint32 local_identifier = 19;
   bytes nlri_binary = 20;
   repeated bytes pattrs_binary = 21;
+  bool send_max_filtered = 22;
 }
 
 message Destination {
@@ -599,6 +620,7 @@ message PeerConf {
   uint32 allow_own_asn = 13;
   bool replace_peer_asn = 14;
   bool admin_down = 15;
+  bool send_software_version = 16;
 }
 
 message PeerGroupConf {
@@ -611,6 +633,7 @@ message PeerGroupConf {
   RemovePrivate remove_private = 7;
   bool route_flap_damping = 8;
   uint32 send_community = 9;
+  bool send_software_version = 10;
 }
 
 message PeerGroupState {
@@ -935,6 +958,12 @@ message AsPathLength {
   uint32 length = 2;
 }
 
+message CommunityCount {
+  enum Type { EQ = 0; GE = 1; LE = 2; }
+  Type type = 1;
+  uint32 count = 2;
+}
+
 message Conditions {
   MatchSet prefix_set = 1;
   MatchSet neighbor_set = 2;
@@ -950,6 +979,7 @@ message Conditions {
   MatchSet large_community_set = 9;
   repeated string next_hop_in_list = 10;
   repeated Family afi_safi_in = 11;
+  CommunityCount community_count = 12;
 }
 
 enum RouteAction { NONE = 0; ACCEPT = 1; REJECT = 2; }
