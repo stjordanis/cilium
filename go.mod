@@ -41,7 +41,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/golang/protobuf v1.5.2
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/google/gopacket v1.1.19
 	github.com/google/gops v0.3.25
 	github.com/google/renameio v1.0.1
@@ -64,7 +64,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/prometheus/client_golang v1.13.0
 	github.com/prometheus/client_model v0.2.1-0.20210607210712-147c58e9608a
-	github.com/prometheus/procfs v0.8.0
+	github.com/prometheus/procfs v0.15.1
 	github.com/russross/blackfriday/v2 v2.1.0
 	github.com/sasha-s/go-deadlock v0.3.1
 	github.com/servak/go-fastping v0.0.0-20160802140958-5718d12e20a0
@@ -87,8 +87,8 @@ require (
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	golang.org/x/exp v0.0.0-20220602145555-4a0574d9293f
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
-	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f
+	golang.org/x/sync v0.7.0
+	golang.org/x/sys v0.20.0
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8
 	golang.org/x/tools v0.1.12
 	golang.zx2c4.com/wireguard v0.0.0-20211017052713-f87e87af0d9a
