@@ -21,7 +21,7 @@ jobs:
           git config --global user.email "github-actions@users.noreply.github.com"
 
       - name: Install Go
-        uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f
+        uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed
         with:
           go-version: 1.19.1
 
