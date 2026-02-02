@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2023 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,9 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// See #682 for more information.
-// +build go1.12
+//go:build (js && wasm) || (wasip1 && wasm)
+// +build js,wasm wasip1,wasm
 
-package zap
+package fx
 
-const _stdLogDefaultDepth = 1
+import "syscall"
+
+const (
+	_sigINT  = syscall.SIGINT
+	_sigTERM = syscall.SIGTERM
+)

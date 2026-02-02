@@ -4,6 +4,86 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.19.0] - 2025-05-13
+
+### Added
+- `BeforeCallback`s can be registered using `WithProviderBeforeCallback` and
+  `WithDecoratorBeforeCallback` to hook custom callbacks into Dig
+  to be run before constructors or decorators are run.
+
+### Changed
+- Dot graph generation now results in much more clean and organized dot files.
+
+Thanks to @Groxx, @architagr, and @pgimalac for their contributions to this release.
+
+[1.19.0]: https://github.com/uber-go/dig/compare/v1.18.2...v1.19.0
+
+## [1.18.2] - 2025-05-08
+### Fixed
+- The exported Version string incorrectly containing "-dev".
+
+[1.18.2]: https://github.com/uber-go/dig/compare/v1.18.1...v1.18.2
+
+## [1.18.1] - 2025-03-03
+### Changed
+- Dot graph generation's internal implementation was changed so that
+  Go linker can successfully perform dead code elimination for Go apps
+  that use Dig.
+
+Thanks to @pgimalac for their contribution to this releaase.
+
+[1.18.1]: https://github.com/uber-go/dig/compare/v1.18.0...v1.18.1
+
+## [1.18.0] - 2024-08-07
+### Added
+- Child scope constructors are now visualized via `Visualize`
+- `CallbackInfo` now includes constructor/decorator run time.
+
+Thanks to @greeflas for their contribution to this release.
+
+[1.18.0]: https://github.com/uber-go/dig/compare/v1.17.1...v1.18.0
+
+## [1.17.1] - 2023-10-19
+### Added
+- Suggestions for value vs. pointer elements for slice and array types.
+
+### Fixed
+- An issue where value group values were not getting decorated
+  by decorators within the same module when using dig.Export(true).
+- A typo in docs.
+- An issue where false positives in cycle detection were occurring
+  when providing to a child scope.
+
+Thanks to @paullen and @lcarilla for their contributions to this release.
+
+[1.17.1]: https://github.com/uber-go/dig/compare/v1.17.0...v1.17.1
+
+## [1.17.0] - 2023-05-02
+### Added
+- Allow using `dig.As` with `dig.Group`.
+- Add `FillInvokeInfo` Option and `InvokeInfo` struct to help
+  extract the types requested by an `Invoke` statement.
+- To get visibility into constructor and decorator calls, introduce
+  `WithProviderCallback` and `WithDecoratorCallback` Options to provide callback functions.
+
+[1.17.0]: https://github.com/uber-go/dig/compare/v1.16.1...v1.17.0
+
+## [1.16.1] - 2023-01-10
+### Fixed
+- A panic when `DryRun` was used with `Decorate`.
+
+[1.16.1]: https://github.com/uber-go/dig/compare/v1.16.0...v1.16.1
+
+## [1.16.0] - 2023-01-03
+### Added
+- Add `RecoverFromPanics` option, which provides panic-recovery mechanism for Container.
+- Add `Error` interface which enables distinguishing errors from Dig using standard `errors`
+  package.
+
+Thanks to @mie998 for their contribution(s) to this release.
+
+[1.16.0]: https://github.com/uber-go/dig/compare/v1.15.0...v1.16.0
+
 ## [1.15.0] - 2022-08-02
 ### Added
 - Support for `soft` value groups, which specify a value group that only gets populated

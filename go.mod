@@ -1,6 +1,6 @@
 module github.com/cilium/cilium
 
-go 1.19
+go 1.22
 
 require (
 	github.com/Azure/azure-sdk-for-go v66.0.0+incompatible
@@ -74,15 +74,15 @@ require (
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20220608195807-1a118fe229fc
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74
 	go.etcd.io/etcd/api/v3 v3.5.4
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4
 	go.etcd.io/etcd/client/v3 v3.5.4
-	go.uber.org/fx v1.18.1
+	go.uber.org/fx v1.24.0
 	go.uber.org/goleak v1.2.0
-	go.uber.org/multierr v1.8.0
+	go.uber.org/multierr v1.10.0
 	go.universe.tf/metallb v0.11.0
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	golang.org/x/exp v0.0.0-20220602145555-4a0574d9293f
@@ -212,9 +212,8 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	gitlab.com/golang-commonmark/puny v0.0.0-20191124015043-9f83538fa04f // indirect
 	go.mongodb.org/mongo-driver v1.10.0 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/dig v1.15.0 // indirect
-	go.uber.org/zap v1.19.1 // indirect
+	go.uber.org/dig v1.19.0 // indirect
+	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
