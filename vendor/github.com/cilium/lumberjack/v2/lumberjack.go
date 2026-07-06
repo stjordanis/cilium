@@ -3,7 +3,7 @@
 // Note that this is v2.0 of lumberjack, and should be imported using gopkg.in
 // thusly:
 //
-//   import "gopkg.in/natefinch/lumberjack.v2"
+//	import "gopkg.in/natefinch/lumberjack.v2"
 //
 // The package name remains simply lumberjack, and the code resides at
 // https://github.com/natefinch/lumberjack under the v2.0 branch.
@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -67,7 +68,7 @@ var _ io.WriteCloser = (*Logger)(nil)
 // `/var/log/foo/server.log`, a backup created at 6:30pm on Nov 11 2016 would
 // use the filename `/var/log/foo/server-2016-11-04T18-30-00.000.log`
 //
-// Cleaning Up Old Log Files
+// # Cleaning Up Old Log Files
 //
 // Whenever a new logfile gets created, old log files may be deleted.  The most
 // recent files according to the encoded timestamp will be retained, up to a
@@ -108,11 +109,16 @@ type Logger struct {
 	// using gzip. The default is not to perform compression.
 	Compress bool `json:"compress" yaml:"compress"`
 
+	// FileMode is the file's mode and permission bits of the log file. If set
+	// it will be used as the specified mode.
+	FileMode fs.FileMode
+
 	size int64
 	file *os.File
 	mu   sync.Mutex
 
 	millCh    chan bool
+	millWg    sync.WaitGroup
 	startMill sync.Once
 }
 
@@ -127,6 +133,8 @@ var (
 	// variable so tests can mock it out and not need to write megabytes of data
 	// to disk.
 	megabyte = 1024 * 1024
+
+	defaultFileMode = os.FileMode(0644)
 )
 
 // Write implements io.Writer.  If a write would cause the log file to be larger
@@ -166,6 +174,11 @@ func (l *Logger) Write(p []byte) (n int, err error) {
 func (l *Logger) Close() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	if l.millCh != nil {
+		close(l.millCh)
+		l.millWg.Wait()
+		l.millCh = nil
+	}
 	return l.close()
 }
 
@@ -213,11 +226,17 @@ func (l *Logger) openNew() error {
 	}
 
 	name := l.filename()
-	mode := os.FileMode(0644)
+	mode := defaultFileMode
+	if l.fileModeIsSet() {
+		mode = l.FileMode
+	}
+
 	info, err := osStat(name)
 	if err == nil {
-		// Copy the mode off the old logfile.
-		mode = info.Mode()
+		// If file mode is not set, use the mode of the existing file.
+		if !l.fileModeIsSet() {
+			mode = info.Mode()
+		}
 		// move the existing file
 		newname := backupName(name, l.LocalTime)
 		if err := os.Rename(name, newname); err != nil {
@@ -225,7 +244,7 @@ func (l *Logger) openNew() error {
 		}
 
 		// this is a no-op anywhere but linux
-		if err := chown(name, info); err != nil {
+		if err := chownWithMode(name, info, mode); err != nil {
 			return err
 		}
 	}
@@ -278,7 +297,7 @@ func (l *Logger) openExistingOrNew(writeLen int) error {
 		return l.rotate()
 	}
 
-	file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, defaultFileMode)
 	if err != nil {
 		// if we fail to open the old log file for some reason, just ignore
 		// it and open a new log file.
@@ -296,6 +315,16 @@ func (l *Logger) filename() string {
 	}
 	name := filepath.Base(os.Args[0]) + "-lumberjack.log"
 	return filepath.Join(os.TempDir(), name)
+}
+
+// fileModeIsSet checks if the file mode of the log file was set. If so
+// it returns true. It does not validate the mode.
+func (l *Logger) fileModeIsSet() bool {
+	if uint32(l.FileMode) != 0 {
+		return true
+	}
+
+	return false
 }
 
 // millRunOnce performs compression and removal of stale log files.
@@ -377,6 +406,7 @@ func (l *Logger) millRunOnce() error {
 // millRun runs in a goroutine to manage post-rotation compression and removal
 // of old log files.
 func (l *Logger) millRun() {
+	defer l.millWg.Done()
 	for range l.millCh {
 		// what am I going to do, log this?
 		_ = l.millRunOnce()
@@ -388,6 +418,7 @@ func (l *Logger) millRun() {
 func (l *Logger) mill() {
 	l.startMill.Do(func() {
 		l.millCh = make(chan bool, 1)
+		l.millWg.Add(1)
 		go l.millRun()
 	})
 	select {
@@ -507,18 +538,17 @@ func compressLogFile(src, dst string) (err error) {
 		return err
 	}
 
-	// Flush the gz writer before Sync()ing
-	if err := gz.Flush(); err != nil {
+	// Close the gzip writer.
+	// Closing also triggers a Flush to the underlying
+	// io.Writer, and doesnot close the underlying io.Writer.
+	// We must Close() or Flush() the gz writer before Sync()ing otherwise we may
+	// see partially written data and a corrupt gzip archive.
+	if err := gz.Close(); err != nil {
 		return err
 	}
 
 	// fsync is important, otherwise os.Rename could rename a zero-length file
 	if err := gzf.Sync(); err != nil {
-		return err
-	}
-
-	// Close the gzip writer
-	if err := gz.Close(); err != nil {
 		return err
 	}
 
